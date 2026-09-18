@@ -81,8 +81,8 @@ public class ListingDao {
     }
 
 
-    public boolean delete(Listing listing) {
-        String query = "DELETE FROM listings WHERE id=" + listing.getId();
+    public boolean delete(int id) {
+        String query = "DELETE FROM listings WHERE id=" + id;
 
         try (Connection conn = Database.getConnection();
              Statement stmt = conn.createStatement()) {
