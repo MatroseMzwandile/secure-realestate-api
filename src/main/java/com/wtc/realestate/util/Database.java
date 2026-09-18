@@ -11,7 +11,7 @@ public class Database {
     public static Connection getConnection() {
         if (connection == null) {
             try {
-                String url = System.getenv().getOrDefault("DB_URL", "jdbc:mysql://localhost3306/realestate");
+                String url = System.getenv().getOrDefault("DB_URL", "jdbc:mysql://localhost:3306/realestate");
                 String user = System.getenv().getOrDefault("DB_USER", "root");
                 String password = System.getenv().getOrDefault("DB_PASSWORD", "");
 
