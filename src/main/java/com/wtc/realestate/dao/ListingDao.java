@@ -1,13 +1,9 @@
 package com.wtc.realestate.dao;
 
-import com.mysql.cj.protocol.Resultset;
 import com.wtc.realestate.model.Listing;
 import com.wtc.realestate.util.Database;
 
-import java.sql.Connection;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
+import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -32,12 +28,13 @@ public class ListingDao {
 
 
     public Listing findById(int id) {
-        String query = "SELECT * FROM listings WHERE id =" + id;
+        String query = "SELECT * FROM listings WHERE id = ?";
 
         try (Connection conn = Database.getConnection();
-             Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery(query)) {
+             PreparedStatement stmt = conn.prepareStatement(query)) {
 
+            stmt.setInt(1,id);
+            ResultSet rs = stmt.executeQuery();
             if (rs.next()){
                 return mapRow(rs);
             }
@@ -49,14 +46,16 @@ public class ListingDao {
 
 
     public void create(Listing listing){
-        String query = "INSERT INTO listings (title, description, price, realtor_id) VALUES ('"
-                + listing.getTitle() + "', '" + listing.getDescription() + "', "
-                + listing.getPrice() + ", " + listing.getRealtorId() + ")";
+        String query = "INSERT INTO listings (title, description, price, realtor_id) VALUES (? , ? ,? , ?)";
 
         try(Connection conn = Database.getConnection();
-            Statement stmt = conn.createStatement()) {
+            PreparedStatement stmt = conn.prepareStatement(query)) {
 
-            stmt.executeUpdate(query);
+            stmt.setString(1, listing.getTitle());
+            stmt.setString(2, listing.getDescription());
+            stmt.setInt(3,listing.getPrice().intValue());
+            stmt.setInt(4,listing.getRealtorId());
+            stmt.executeUpdate();
 
         } catch (SQLException e) {
             throw new RuntimeException("Creating listing failed", e);
@@ -65,13 +64,14 @@ public class ListingDao {
 
 
     public boolean update(Listing listing){
-        String query = "UPDATE listings SET title = '" + listing.getTitle()
-                + "', description ='" + listing.getDescription()
-                + "', price = " + listing.getPrice()
-                + " WHERE id = " + listing.getId();
+        String query = "UPDATE listings SET title = ?, description = ?, price = ? WHERE id = ?";
 
         try (Connection conn = Database.getConnection();
-            Statement stmt = conn.createStatement()) {
+            PreparedStatement stmt = conn.prepareStatement(query)) {
+
+            stmt.setString(1, listing.getTitle());
+            stmt.setString(2, listing.getDescription());
+            stmt.setInt(3,listing.getPrice().intValue());
 
             int rows = stmt.executeUpdate(query);
             return rows > 0;
@@ -82,12 +82,13 @@ public class ListingDao {
 
 
     public boolean delete(int id) {
-        String query = "DELETE FROM listings WHERE id=" + id;
+        String query = "DELETE FROM listings WHERE id= ?";
 
         try (Connection conn = Database.getConnection();
-             Statement stmt = conn.createStatement()) {
+             PreparedStatement stmt = conn.prepareStatement(query)) {
 
-            int rows = stmt.executeUpdate(query);
+            stmt.setInt(1,id);
+            int rows = stmt.executeUpdate();
             return rows > 0;
         } catch (SQLException e) {
             throw new RuntimeException("Deleting listing failed", e);
