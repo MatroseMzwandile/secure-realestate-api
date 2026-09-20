@@ -72,10 +72,23 @@ public class Main {
 
         app.put("/listings/{id}", ctx -> {
             Integer realtorId = requireAuth(ctx);
+            int listingId = Integer.parseInt(ctx.pathParam("id"));
             if (realtorId == null) return;
 
-            Listing listing = new Listing();
-            listing.setId(Integer.parseInt(ctx.pathParam("id")));
+            Listing listing = listingDao.findById(listingId);
+
+            if (listing == null) {
+                ctx.status(404).result("Listing not found");
+                return;
+            }
+
+            if (listing.getRealtorId() != realtorId) {
+                ctx.status(403).result("Forbidden: not your listing");
+                return;
+            }
+
+            listing = new Listing();
+            listing.setId(listingId);
             listing.setTitle(ctx.formParam("title"));
             listing.setDescription(ctx.formParam("description"));
             listing.setPrice(new java.math.BigDecimal(ctx.formParam("price")));
@@ -91,9 +104,21 @@ public class Main {
         app.delete("/listings/{id}", ctx -> {
             Integer realtorId = requireAuth(ctx);
             if (realtorId == null) return;
+            int listingId = Integer.parseInt(ctx.pathParam("id"));
 
-            // Same intentional gap as update() above — fixed in Phase 4.
-            int id = Integer.parseInt(ctx.pathParam("id"));
+            Listing listing = listingDao.findById(listingId);
+
+            if (listing == null) {
+                ctx.status(404).result("Listing not found");
+                return;
+            }
+
+            if (listing.getRealtorId() != realtorId) {
+                ctx.status(403).result("Forbidden: not your listing");
+                return;
+            }
+
+            int id = Integer.parseInt(String.valueOf(listingId));
             boolean deleted = listingDao.delete(id);
             if (deleted) {
                 ctx.json(Map.of("message", "Listing deleted"));
