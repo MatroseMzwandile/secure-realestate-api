@@ -67,13 +67,14 @@ public class ListingDao {
         String query = "UPDATE listings SET title = ?, description = ?, price = ? WHERE id = ?";
 
         try (Connection conn = Database.getConnection();
-            PreparedStatement stmt = conn.prepareStatement(query)) {
+             PreparedStatement stmt = conn.prepareStatement(query)) {
 
             stmt.setString(1, listing.getTitle());
             stmt.setString(2, listing.getDescription());
-            stmt.setInt(3,listing.getPrice().intValue());
+            stmt.setInt(3, listing.getPrice().intValue());
+            stmt.setInt(4, listing.getId());
 
-            int rows = stmt.executeUpdate(query);
+            int rows = stmt.executeUpdate();
             return rows > 0;
         } catch (SQLException e) {
             throw new RuntimeException("Updating listing failed", e);
