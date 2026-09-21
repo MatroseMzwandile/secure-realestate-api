@@ -19,8 +19,8 @@ CREATE TABLE IF NOT EXISTS listings (
     );
 
 INSERT INTO realtors (username,password) VALUES
-    ('alice', 'password123'),
-    ('bob', 'hunter2');
+     ('alice', '$2b$10$zE/3gTznMJPWUpsUpU/LZud4eZ7vBC.NIVB./T2ZKHYX/moBUVjGW'), -- password=password123
+     ('bob', '$2b$10$cNfbS5nfwk1RUHUjtxOfx.Qb0sR6rbdl2du3kljp2h69y1S2P5xPC'); -- password=hunter2
 
 INSERT INTO listings (title, description, price, realtor_id) VALUES
      ('Cosy 2-bed in Melville', 'Close to shops and restaurants', 1250000.00, 1),
