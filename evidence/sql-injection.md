@@ -89,3 +89,61 @@ The `'1'='1'` half is always true, so the whole thing is always true — logged 
 ### The takeaway
 
 Both bugs come from the exact same mistake: **user input is pasted straight into the SQL string instead of being kept separate from it.** The fix (Phase 4) is to swap this out for a `PreparedStatement` with `?` placeholders — that way, whatever someone types is always treated as plain data, never as part of the command.
+
+---
+
+## Remediation
+
+Both `login()` and `findById()` in `RealtorDao.java` now use `PreparedStatement` with `?` placeholders instead of string concatenation:
+
+```java
+String query = "SELECT * FROM realtors WHERE username = ?";
+PreparedStatement stmt = conn.prepareStatement(query);
+stmt.setString(1, username);
+```
+
+Whatever gets typed into `username` or `password` is now sent to the database as a **value**, never as part of the query text. The database can no longer be tricked into treating `' OR '1'='1' --` as SQL logic — it just gets compared literally against the username column, like any other string, and matches nothing.
+
+Password hashing (see schema.sql and RealtorDao.login()) closes the password-field vector completely, since the password never appears in a SQL query at all anymore — it's fetched by username only, then checked in Java with `BCrypt.checkpw()`.
+
+### 5. Re-test — username field payload, after the fix
+
+```
+$ curl -i -X POST http://localhost:7000/login \
+  --data-urlencode "username=' OR '1'='1' -- " \
+  --data-urlencode "password=anything"
+
+HTTP/1.1 401 Unauthorized
+{"error":"Invalid credentials"}
+```
+
+No bypass. The payload is treated as a literal (and nonexistent) username.
+
+### 6. Re-test — password field payload, after the fix
+
+```
+$ curl -i -X POST http://localhost:7000/login \
+  --data-urlencode "username=bob" \
+  --data-urlencode "password=' OR '1'='1"
+
+HTTP/1.1 401 Unauthorized
+{"error":"Invalid credentials"}
+```
+
+No bypass here either — the password is no longer part of any query, so there's nothing for the payload to inject into.
+
+### 7. Confirm normal login still works
+
+```
+$ curl -i -X POST http://localhost:7000/login -d "username=alice" -d "password=password123"
+
+HTTP/1.1 200 OK
+{"token":"...","realtorId":1}
+```
+
+Same credentials as before, still work — the fix changes *how* the password is checked, not what the correct password is.
+
+### Screenshots
+
+- `screenshot5.png` — both exploit payloads now returning 401
+- `screenshot6.png` — normal login still succeeding after the fix
