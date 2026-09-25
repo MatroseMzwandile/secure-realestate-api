@@ -143,3 +143,6 @@ Verification: every fix above was manually re-tested by re-running the exact exp
 ## Why these choices
 
 This project deliberately avoids Spring and an ORM so that the security issues are visible and explainable at the JDBC/SQL level, rather than hidden behind framework defaults — the goal is to understand why each vulnerability exists and why each fix works, not just to apply a framework's built-in protections without knowing what they do.
+
+# Verification Code:
+WTC-BVNF7W75
