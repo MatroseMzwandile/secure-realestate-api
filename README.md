@@ -138,7 +138,7 @@ Verification: every fix above was manually re-tested by re-running the exact exp
 
 ## Demo video
 
-(Link to the YouTube walkthrough will go here once recorded.)
+[(Link to the YouTube walkthrough will go here once recorded.)](https://www.youtube.com/watch?v=TK-47AwBzhE)
 
 ## Why these choices
 
